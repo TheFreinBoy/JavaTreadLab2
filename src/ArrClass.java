@@ -1,4 +1,3 @@
-
 import java.util.Random;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -6,35 +5,44 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ArrClass {
     private final int dim;
-    private final int threadNum;
     private final int[] arr;
 
-    private int globalMin = Integer.MAX_VALUE;
-    private int globalMinIndex = -1;
+    private int globalMin;
+    private int globalMinIndex;
 
     private final Lock lockerForMin = new ReentrantLock();
     private final Lock lockerForCount = new ReentrantLock();
     private final Condition countCondition = lockerForCount.newCondition();
 
-    private int threadCount = 0;
+    private int threadCount;
+    private int currentThreadNum;
 
-    public ArrClass(int dim, int threadNum) {
+    public ArrClass(int dim) {
         this.dim = dim;
-        this.threadNum = threadNum;
         this.arr = new int[dim];
         initArr();
     }
 
     private void initArr() {
+        System.out.println("Генерація масиву з " + dim + " елементів... (зачекайте)");
         Random rnd = new Random();
+
         for (int i = 0; i < dim; i++) {
-            arr[i] = i;
+            arr[i] = rnd.nextInt(100) + 1;
         }
 
         int randomIndex = rnd.nextInt(dim);
-        arr[randomIndex] = -99999;
+        int randomNegative = -(rnd.nextInt(1000) + 1);
+        arr[randomIndex] = randomNegative;
 
-        System.out.println("[Генерація] Від'ємне число (-99999) розміщено під індексом: " + randomIndex);
+        System.out.println("[ЗГЕНЕРОВАНО] Мінусовий елемент: " + randomNegative + ", з індексом: " + randomIndex + "\n");
+    }
+
+    public void resetForNewSearch(int threadNum) {
+        this.globalMin = Integer.MAX_VALUE;
+        this.globalMinIndex = -1;
+        this.threadCount = 0;
+        this.currentThreadNum = threadNum;
     }
 
     public int[] findPartMin(int startIndex, int finishIndex) {
@@ -47,7 +55,6 @@ public class ArrClass {
                 localMinIndex = i;
             }
         }
-
         return new int[]{localMin, localMinIndex};
     }
 
@@ -76,7 +83,7 @@ public class ArrClass {
     private void waitAllThreads() {
         lockerForCount.lock();
         try {
-            while (threadCount < threadNum) {
+            while (threadCount < currentThreadNum) {
                 countCondition.await();
             }
         } catch (InterruptedException e) {
@@ -87,11 +94,11 @@ public class ArrClass {
     }
 
     public void parallelMin() {
-        int chunkSize = dim / threadNum;
-        int remainder = dim % threadNum;
+        int chunkSize = dim / currentThreadNum;
+        int remainder = dim % currentThreadNum;
         int currentStart = 0;
 
-        for (int i = 0; i < threadNum; i++) {
+        for (int i = 0; i < currentThreadNum; i++) {
             int currentFinish = currentStart + chunkSize + (i < remainder ? 1 : 0);
 
             ThreadMin worker = new ThreadMin(currentStart, currentFinish, this);
@@ -102,8 +109,8 @@ public class ArrClass {
         }
 
         waitAllThreads();
-
-        System.out.println("\n[Результат] Мінімальний елемент: " + globalMin);
-        System.out.println("[Результат] Індекс: " + globalMinIndex);
     }
+
+    public int getGlobalMin() { return globalMin; }
+    public int getGlobalMinIndex() { return globalMinIndex; }
 }

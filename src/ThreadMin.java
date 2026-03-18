@@ -1,4 +1,3 @@
-
 public class ThreadMin implements Runnable {
     private final int startIndex;
     private final int finishIndex;
@@ -13,9 +12,7 @@ public class ThreadMin implements Runnable {
     @Override
     public void run() {
         int[] result = arrClass.findPartMin(startIndex, finishIndex);
-
         arrClass.collectMin(result[0], result[1]);
-
         arrClass.incThreadCount();
     }
 }
